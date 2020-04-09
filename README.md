@@ -1,99 +1,80 @@
-<!-- AUTO-GENERATED-CONTENT:START (STARTER) -->
-<p align="center">
-  <a href="https://www.gatsbyjs.org">
-    <img alt="Gatsby" src="https://www.gatsbyjs.org/monogram.svg" width="60" />
-  </a>
-</p>
-<h1 align="center">
-  Gatsby's hello-world starter
-</h1>
+## Gatsby issue: non-deterministic hashes for incremental builds
 
-Kick off your project with this hello-world boilerplate. This starter ships with the main Gatsby configuration files you might need to get up and running blazing fast with the blazing fast app generator for React.
+### To reproduce
 
-_Have another more specific idea? You may want to check out our vibrant collection of [official and community-created starters](https://www.gatsbyjs.org/docs/gatsby-starters/)._
+1. Build the site with the `GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES` flag on
 
-## 🚀 Quick start
+```
+$ GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES=true npm run build -- --log-pages
+```
 
-1.  **Create a Gatsby site.**
+Observe pages being emitted:
 
-    Use the Gatsby CLI to create a new site, specifying the hello-world starter.
+```
+➜ GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES=true npm run build -- --log-pages
 
-    ```shell
-    # create a new Gatsby site using the hello-world starter
-    gatsby new my-hello-world-starter https://github.com/gatsbyjs/gatsby-starter-hello-world
-    ```
+> gatsby-starter-hello-world@0.1.0 build /Volumes/Projects/bug-repro
+> gatsby build "--log-pages"
 
-1.  **Start developing.**
+success open and validate gatsby-configs - 0.015s
+success load plugins - 0.026s
+success onPreInit - 0.003s
+success initialize cache - 0.006s
+success copy gatsby files - 0.060s
+success onPreBootstrap - 0.010s
+success createSchemaCustomization - 0.004s
+success source and transform nodes - 0.015s
+success building schema - 0.140s
+success createPages - 0.028s
+success createPagesStatefully - 0.027s
+success onPreExtractQueries - 0.002s
+success update schema - 0.018s
+success extract queries from components - 0.010s
+success write out requires - 0.004s
+success write out redirect data - 0.002s
+success onPostBootstrap - 0.002s
+⠀
+info bootstrap finished - 3.174 s
+⠀
+success Building production JavaScript and CSS bundles - 2.043s
+success Rewriting compilation hashes - 0.004s
+success run queries - 2.146s - 3/3 1.40/s
+success Building static HTML for pages - 0.217s - 3/3 13.81/s
+success Delete previous page data - 0.001s
+success onPostBuild - 0.001s
+info Done building in 5.571871769 sec
+info Built pages:
+Updated page: /one
+Updated page: /two
+Updated page: /
+```
 
-    Navigate into your new site’s directory and start it up.
+2. Run the build again a few times.
 
-    ```shell
-    cd my-hello-world-starter/
-    gatsby develop
-    ```
+Since no code or content has changed (we generate a random `last_updated` date but do not query for it), the build hash should not change and no pages should be emitted.
 
-1.  **Open the source code and start editing!**
+However, sometimes it *does* change. This is due to the fact that the pages are not always emitted in the same order, causing the keys in `.cache/async-requires.js` to be written in a different order and producing a different hash for the module, and the build:
 
-    Your site is now running at `http://localhost:8000`!
+```
+// BUILD 1
 
-    _Note: You'll also see a second link: _`http://localhost:8000/___graphql`_. This is a tool you can use to experiment with querying your data. Learn more about using this tool in the [Gatsby tutorial](https://www.gatsbyjs.org/tutorial/part-five/#introducing-graphiql)._
+// prefer default export if available
+const preferDefault = m => m && m.default || m
 
-    Open the `my-hello-world-starter` directory in your code editor of choice and edit `src/pages/index.js`. Save your changes and the browser will update in real time!
+exports.components = {
+  "component---src-templates-post-template-1-js": () => import("./../src/templates/post-template-1.js" /* webpackChunkName: "component---src-templates-post-template-1-js" */),
+  "component---src-templates-post-template-2-js": () => import("./../src/templates/post-template-2.js" /* webpackChunkName: "component---src-templates-post-template-2-js" */),
+  "component---src-pages-index-js": () => import("./../src/pages/index.js" /* webpackChunkName: "component---src-pages-index-js" */)
+}
 
-## 🧐 What's inside?
+// BUILD 2
 
-A quick look at the top-level files and directories you'll see in a Gatsby project.
+// prefer default export if available
+const preferDefault = m => m && m.default || m
 
-    .
-    ├── node_modules
-    ├── src
-    ├── .gitignore
-    ├── .prettierrc
-    ├── gatsby-browser.js
-    ├── gatsby-config.js
-    ├── gatsby-node.js
-    ├── gatsby-ssr.js
-    ├── LICENSE
-    ├── package-lock.json
-    ├── package.json
-    └── README.md
-
-1.  **`/node_modules`**: This directory contains all of the modules of code that your project depends on (npm packages) are automatically installed.
-
-2.  **`/src`**: This directory will contain all of the code related to what you will see on the front-end of your site (what you see in the browser) such as your site header or a page template. `src` is a convention for “source code”.
-
-3.  **`.gitignore`**: This file tells git which files it should not track / not maintain a version history for.
-
-4.  **`.prettierrc`**: This is a configuration file for [Prettier](https://prettier.io/). Prettier is a tool to help keep the formatting of your code consistent.
-
-5.  **`gatsby-browser.js`**: This file is where Gatsby expects to find any usage of the [Gatsby browser APIs](https://www.gatsbyjs.org/docs/browser-apis/) (if any). These allow customization/extension of default Gatsby settings affecting the browser.
-
-6.  **`gatsby-config.js`**: This is the main configuration file for a Gatsby site. This is where you can specify information about your site (metadata) like the site title and description, which Gatsby plugins you’d like to include, etc. (Check out the [config docs](https://www.gatsbyjs.org/docs/gatsby-config/) for more detail).
-
-7.  **`gatsby-node.js`**: This file is where Gatsby expects to find any usage of the [Gatsby Node APIs](https://www.gatsbyjs.org/docs/node-apis/) (if any). These allow customization/extension of default Gatsby settings affecting pieces of the site build process.
-
-8.  **`gatsby-ssr.js`**: This file is where Gatsby expects to find any usage of the [Gatsby server-side rendering APIs](https://www.gatsbyjs.org/docs/ssr-apis/) (if any). These allow customization of default Gatsby settings affecting server-side rendering.
-
-9.  **`LICENSE`**: Gatsby is licensed under the MIT license.
-
-10. **`package-lock.json`** (See `package.json` below, first). This is an automatically generated file based on the exact versions of your npm dependencies that were installed for your project. **(You won’t change this file directly).**
-
-11. **`package.json`**: A manifest file for Node.js projects, which includes things like metadata (the project’s name, author, etc). This manifest is how npm knows which packages to install for your project.
-
-12. **`README.md`**: A text file containing useful reference information about your project.
-
-## 🎓 Learning Gatsby
-
-Looking for more guidance? Full documentation for Gatsby lives [on the website](https://www.gatsbyjs.org/). Here are some places to start:
-
-- **For most developers, we recommend starting with our [in-depth tutorial for creating a site with Gatsby](https://www.gatsbyjs.org/tutorial/).** It starts with zero assumptions about your level of ability and walks through every step of the process.
-
-- **To dive straight into code samples, head [to our documentation](https://www.gatsbyjs.org/docs/).** In particular, check out the _Guides_, _API Reference_, and _Advanced Tutorials_ sections in the sidebar.
-
-## 💫 Deploy
-
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/gatsbyjs/gatsby-starter-hello-world)
-
-[![Deploy with ZEIT Now](https://zeit.co/button)](https://zeit.co/import/project?template=https://github.com/gatsbyjs/gatsby-starter-hello-world)
-
-<!-- AUTO-GENERATED-CONTENT:END -->
+exports.components = {
+  "component---src-templates-post-template-2-js": () => import("./../src/templates/post-template-2.js" /* webpackChunkName: "component---src-templates-post-template-2-js" */),
+  "component---src-templates-post-template-1-js": () => import("./../src/templates/post-template-1.js" /* webpackChunkName: "component---src-templates-post-template-1-js" */),
+  "component---src-pages-index-js": () => import("./../src/pages/index.js" /* webpackChunkName: "component---src-pages-index-js" */)
+}
+```
